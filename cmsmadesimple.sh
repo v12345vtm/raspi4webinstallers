@@ -6,114 +6,96 @@ set -e
 # Configuration and install in 1 cli command : wget -O- https://raw.githubusercontent.com/v12345vtm/raspi4webinstallers/main/cmsmadesimple.sh | bash
 #########################################
 
-CMS_DB="cmsms"
-CMS_USER="cmsmsuser"
-CMS_PASS="cmsmspassword"
+ 
 
-WEBROOT="/var/www/html"
+echo "=========================================="
+echo " CMS Made Simple Installer"
+echo " Raspberry Pi 4"
+echo "=========================================="
 
-#########################################
+DB_NAME="cmsms"
+DB_USER="cmsmsuser"
+DB_PASS="cmsmspassword"
 
+INSTALLER_URL="https://s3.amazonaws.com/cmsms/downloads/15249/cmsms-2.2.22-install.zip"
+
+echo
 echo "Updating system..."
 sudo apt update
 sudo apt -y upgrade
 
-echo "Installing Apache, MariaDB and PHP..."
-
+echo
+echo "Installing required packages..."
 sudo apt install -y \
 apache2 \
 mariadb-server \
-wget \
-unzip \
 php \
 libapache2-mod-php \
 php-mysql \
 php-gd \
 php-xml \
 php-curl \
-php-zip \
 php-mbstring \
+php-zip \
 php-intl \
 php-soap \
 php-cli \
-php-json \
-php-bcmath
+php-bcmath \
+unzip \
+wget
 
-echo "Enabling Apache..."
-sudo systemctl enable apache2
+echo
+echo "Starting services..."
+sudo systemctl enable apache2 mariadb
 sudo systemctl restart apache2
+sudo systemctl restart mariadb
 
-echo "Enabling MariaDB..."
-sudo systemctl enable mariadb
-sudo systemctl start mariadb
-
+echo
 echo "Creating database..."
-
 sudo mysql <<EOF
-
-CREATE DATABASE IF NOT EXISTS ${CMS_DB};
-
-CREATE USER IF NOT EXISTS '${CMS_USER}'@'localhost'
-IDENTIFIED BY '${CMS_PASS}';
-
-GRANT ALL PRIVILEGES
-ON ${CMS_DB}.*
-TO '${CMS_USER}'@'localhost';
-
+CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
-
 EOF
 
-echo "Downloading CMS Made Simple..."
+echo
+echo "Preparing web root..."
 
-cd /tmp
+sudo rm -rf /var/www/html/*
+cd /var/www/html
 
-LATEST=$(wget -qO- https://www.cmsmadesimple.org/downloads/latest)
+echo
+echo "Downloading CMS Made Simple installer..."
+sudo wget -O cmsms-install.zip "$INSTALLER_URL"
 
-wget -O cmsms.tar.gz "$LATEST"
+echo
+echo "Extracting installer..."
+sudo unzip -o cmsms-install.zip
 
-sudo rm -rf ${WEBROOT:?}/*
+sudo rm cmsms-install.zip
 
-sudo tar xzf cmsms.tar.gz
-
-DIR=$(find . -maxdepth 1 -type d -name "cmsmadesimple*" | head -n1)
-
-sudo cp -r "$DIR"/* "$WEBROOT"
-
-sudo chown -R www-data:www-data "$WEBROOT"
-
-sudo find "$WEBROOT" -type d -exec chmod 755 {} \;
-
-sudo find "$WEBROOT" -type f -exec chmod 644 {} \;
-
-echo "Creating upload directories..."
-
-sudo mkdir -p "$WEBROOT/uploads"
-sudo mkdir -p "$WEBROOT/tmp"
-sudo mkdir -p "$WEBROOT/admin/tmp/cache"
-
-sudo chown -R www-data:www-data "$WEBROOT/uploads"
-sudo chown -R www-data:www-data "$WEBROOT/tmp"
-sudo chown -R www-data:www-data "$WEBROOT/admin"
-
-sudo systemctl restart apache2
+sudo chown -R www-data:www-data /var/www/html
+sudo find /var/www/html -type d -exec chmod 755 {} \;
+sudo find /var/www/html -type f -exec chmod 644 {} \;
 
 IP=$(hostname -I | awk '{print $1}')
 
 echo
-echo "========================================="
-echo
-echo "CMS Made Simple installed."
+echo "=========================================="
+echo "Installation complete!"
 echo
 echo "Open:"
 echo
-echo "http://$IP"
+echo "    http://${IP}/cmsms-2.2.22-install.php"
 echo
-echo "Database:"
-echo "  Database : $CMS_DB"
-echo "  User     : $CMS_USER"
-echo "  Password : $CMS_PASS"
+echo "Database settings:"
 echo
-echo "Finish the installation in your browser."
+echo "Host:      localhost"
+echo "Database:  ${DB_NAME}"
+echo "User:      ${DB_USER}"
+echo "Password:  ${DB_PASS}"
 echo
-echo "========================================="
+echo "After installation, delete:"
+echo "    /var/www/html/cmsms-2.2.22-install.php"
+echo "=========================================="
