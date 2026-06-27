@@ -3,7 +3,7 @@
 set -e
 
 #########################################
-# Configuration
+# Configuration and install in 1 cli command : wget -O- https://raw.githubusercontent.com/v12345vtm/raspi4webinstallers/main/cmsmadesimple.sh | bash
 #########################################
 
 CMS_DB="cmsms"
